@@ -1,4 +1,4 @@
-obj-m:= paramKernel.o
+obj-m:= procKernel.o
 KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 all:
