@@ -1,26 +1,32 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/proc_fs.h>
-#include <asm/uaccess.h>
-// (struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
-// (char *page, char **start, off_t off, int count, int *eof, void *data)
-// ssize_t hello_call(char *buf, char **start, off_t off, int count, int *eof, void *data)
-ssize_t hello_call(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
+#include <linux/seq_file.h>
+
+static int hello_proc_show(struct seq_file *seq, void *v)
 {
-    char* myString = "Message from a Linux kernel module.\n";
-    int ret = 0;
-    ret = copy_to_user(buf, myString, count);
-    if(!ret) return -1;
-    printk(KERN_INFO "This is a test for proc file.\n");
-    return count;
+    seq_printf(seq, "Success!\n");
+    return 0;        
 }
+
+static int hello_proc_open(struct inode *inode, struct file *file)
+{
+    return single_open(file, hello_proc_show, NULL);
+}
+
+static const struct file_operations proc_fops= {
+    .owner = THIS_MODULE,
+    .open  = hello_proc_open,
+    .read  = seq_read,
+    .llseek  = seq_lseek,
+    .release = single_release,
+};
+
 
 static int __init hello_init(void){
     struct proc_dir_entry *entry;
-    struct file_operations proc_fops= {
-        .read= hello_call,
-    };
-    entry = proc_create("hello", 0444, NULL, &proc_fops);
+
+    entry = proc_create("hello", 0644, NULL, &proc_fops);
     if(!entry)
         return -1;
     else{
@@ -31,21 +37,12 @@ static int __init hello_init(void){
 
 static void __exit hello_exit(void){
     remove_proc_entry("hello", NULL);
-    printk(KERN_INFO "Goodbye world\n");
+    printk(KERN_INFO "Proc_read_entry deleted successfully.\n");
 }
 
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Print-param");
+MODULE_DESCRIPTION("Print-proc");
 MODULE_AUTHOR("Guyao");
 
 module_init(hello_init);
 module_exit(hello_exit);
-
-// struct proc_dir_entry *create_proc_read_entry
-// (
-//     const char *name,
-//     mode_t mode,
-//     struct proc_dir_entry *base,
-//     read_proc_t *read_proc,
-//     void *data
-// );
