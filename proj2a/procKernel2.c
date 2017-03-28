@@ -23,14 +23,13 @@ ssize_t read_proc(struct file *filp, char *buf, size_t count, loff_t *offp)
 ssize_t write_proc(struct file *filp, const char *buf, size_t count, loff_t *offp)
 {
     copy_from_user(msg, buf, count);
-    printk(KERN_INFO "In write");
+    // printk(KERN_INFO "In write");
     len = count;
     temp = len;
     return count;
 }
 
 static const struct file_operations proc_fops = {
-    .owner = THIS_MODULE,
     .read = read_proc,
     .write = write_proc,
 };
@@ -39,7 +38,7 @@ static int __init hello_init(void)
 {
     struct proc_dir_entry *entry;
     entry = proc_create("hello", 0777, NULL, &proc_fops);
-    msg = kmalloc(GFP_KERNEL,10*sizeof(char));
+    msg = kmalloc(10*sizeof(char),GFP_KERNEL);
     if (!entry)
         return -1;
     else
@@ -52,6 +51,7 @@ static int __init hello_init(void)
 static void __exit hello_exit(void)
 {
     remove_proc_entry("hello", NULL);
+    kfree(msg);
     printk(KERN_INFO "Proc_read_entry deleted successfully.\n");
 }
 
