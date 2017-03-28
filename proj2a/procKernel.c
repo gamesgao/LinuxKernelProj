@@ -5,7 +5,7 @@
 
 static int hello_proc_show(struct seq_file *seq, void *v)
 {
-    seq_printf(seq, "Success!\n");
+    seq_printf(seq, "Read Success!\n");
     return 0;        
 }
 
@@ -25,7 +25,6 @@ static const struct file_operations proc_fops= {
 
 static int __init hello_init(void){
     struct proc_dir_entry *entry;
-
     entry = proc_create("hello", 0644, NULL, &proc_fops);
     if(!entry)
         return -1;
