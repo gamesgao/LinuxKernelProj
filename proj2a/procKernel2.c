@@ -4,11 +4,15 @@
 #include <asm/uaccess.h>
 #include <linux/slab.h>
 
+int MAXMSG = 10;
 int len, temp;
 char* msg;
+struct proc_dir_entry *entry;
+struct proc_dir_entry *my_dir;
 
 ssize_t read_proc(struct file *filp, char *buf, size_t count, loff_t *offp)
 {
+    // cat will read this file repeatly until 0 is returned!
     if (count > temp)
     {
         count = temp;
@@ -22,8 +26,12 @@ ssize_t read_proc(struct file *filp, char *buf, size_t count, loff_t *offp)
 
 ssize_t write_proc(struct file *filp, const char *buf, size_t count, loff_t *offp)
 {
+    if(count >= MAXMSG){
+        kfree(msg);
+        msg = kmalloc((count+1)*sizeof(char),GFP_KERNEL);
+    }
     copy_from_user(msg, buf, count);
-    // printk(KERN_INFO "In write");
+    // printk(KERN_INFO "In write %ld\n", count);
     len = count;
     temp = len;
     return count;
@@ -36,9 +44,9 @@ static const struct file_operations proc_fops = {
 
 static int __init hello_init(void)
 {
-    struct proc_dir_entry *entry;
-    entry = proc_create("hello", 0777, NULL, &proc_fops);
-    msg = kmalloc(10*sizeof(char),GFP_KERNEL);
+    my_dir = proc_mkdir("mydir", NULL);
+    entry = proc_create("hello", 0777, my_dir, &proc_fops);
+    msg = kmalloc(MAXMSG*sizeof(char),GFP_KERNEL);
     if (!entry)
         return -1;
     else
@@ -50,7 +58,8 @@ static int __init hello_init(void)
 
 static void __exit hello_exit(void)
 {
-    remove_proc_entry("hello", NULL);
+    remove_proc_entry("hello", my_dir);
+    remove_proc_entry("mydir", NULL);
     kfree(msg);
     printk(KERN_INFO "Proc_read_entry deleted successfully.\n");
 }
