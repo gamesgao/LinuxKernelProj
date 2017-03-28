@@ -5,8 +5,8 @@
 #include <linux/slab.h>
 
 int MAXMSG = 10;
-int len, temp;
-char* msg;
+int len=0, temp;
+char *msg;
 struct proc_dir_entry *entry;
 struct proc_dir_entry *my_dir;
 
@@ -26,15 +26,50 @@ ssize_t read_proc(struct file *filp, char *buf, size_t count, loff_t *offp)
 
 ssize_t write_proc(struct file *filp, const char *buf, size_t count, loff_t *offp)
 {
-    if(count >= MAXMSG){
-        kfree(msg);
-        msg = kmalloc((count+1)*sizeof(char),GFP_KERNEL);
+
+    char *ptr;
+    char *tempMsg;
+    int i = 0;
+    if (filp->f_flags & O_APPEND)
+    {
+        ptr = msg;
+        for (i = 0; i < len; i++)
+        {
+            ptr++;
+        }
+        if (count >= MAXMSG - len - 1)
+        {
+            tempMsg = kmalloc((count + len + 1) * sizeof(char), GFP_KERNEL);
+            memcpy(tempMsg, msg, len);
+            kfree(msg);
+            msg = tempMsg;
+            ptr = msg;
+            for (i = 0; i < len; i++)
+            {
+                ptr++;
+            }
+        }
+        copy_from_user(ptr, buf, count);
+        printk(KERN_INFO "In write %d\n", len);
+        // printk(KERN_INFO "In write %s\n", msg);
+        len = count + len;
+        temp = len;
+        return len;
     }
-    copy_from_user(msg, buf, count);
-    // printk(KERN_INFO "In write %ld\n", count);
-    len = count;
-    temp = len;
-    return count;
+    else
+    {
+        if (count >= MAXMSG)
+        {
+            kfree(msg);
+            msg = kmalloc((count + 1) * sizeof(char), GFP_KERNEL);
+        }
+        copy_from_user(msg, buf, count);
+        // printk(KERN_INFO "In write %ld\n", count);
+        // printk(KERN_INFO "In write %d\n", filp->f_flags & O_APPEND);
+        len = count;
+        temp = len;
+        return count;
+    }
 }
 
 static const struct file_operations proc_fops = {
@@ -46,7 +81,8 @@ static int __init hello_init(void)
 {
     my_dir = proc_mkdir("mydir", NULL);
     entry = proc_create("hello", 0777, my_dir, &proc_fops);
-    msg = kmalloc(MAXMSG*sizeof(char),GFP_KERNEL);
+    msg = kmalloc(MAXMSG * sizeof(char), GFP_KERNEL);
+    len = 0;
     if (!entry)
         return -1;
     else
