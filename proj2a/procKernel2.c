@@ -43,6 +43,7 @@ ssize_t write_proc(struct file *filp, const char *buf, size_t count, loff_t *off
             memcpy(tempMsg, msg, len);
             kfree(msg);
             msg = tempMsg;
+            MAXMSG = count + len + 1;
             ptr = msg;
             for (i = 0; i < len; i++)
             {
@@ -50,7 +51,7 @@ ssize_t write_proc(struct file *filp, const char *buf, size_t count, loff_t *off
             }
         }
         copy_from_user(ptr, buf, count);
-        printk(KERN_INFO "In write %d\n", len);
+        // printk(KERN_INFO "In write %d\n", len);
         // printk(KERN_INFO "In write %s\n", msg);
         len = count + len;
         temp = len;
@@ -62,6 +63,7 @@ ssize_t write_proc(struct file *filp, const char *buf, size_t count, loff_t *off
         {
             kfree(msg);
             msg = kmalloc((count + 1) * sizeof(char), GFP_KERNEL);
+            MAXMSG = count + 1;
         }
         copy_from_user(msg, buf, count);
         // printk(KERN_INFO "In write %ld\n", count);
