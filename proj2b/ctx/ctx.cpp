@@ -20,7 +20,6 @@ int getCtx(long pid)
     if (fin)
     {
         fin.getline(buffer, 80, '\n');
-        // cout << buffer << endl;
     }
     else
     {
@@ -44,7 +43,6 @@ int getCtx(long pid)
 void printCtx()
 {
     char *paths[] = {"/proc", 0};
-    // char **paths = argc > 1 ? argv + 1 : dot;
 
     FTS *tree = fts_open(paths, FTS_NOCHDIR, 0);
     if (!tree)
@@ -56,7 +54,7 @@ void printCtx()
     FTSENT *node;
     int test2 = 0;
     int pid = 0;
-    system("clear");
+    
     cout << "pid\tctx" << endl;
     while ((node = fts_read(tree)))
     {
@@ -67,24 +65,11 @@ void printCtx()
         {
             fts_set(tree, node, FTS_SKIP);
             test2++;
-            // printf("got file named %s at depth %d, "
-            //     "accessible via %s from the current directory "
-            //     "or via %s from the original starting directory\n",
-            //     node->fts_name, node->fts_level,
-            //     node->fts_accpath, node->fts_path);
-            /* if fts_open is not given FTS_NOCHDIR,
-             * fts may change the program's current working directory */
-
             sscanf(node->fts_name, "%d", &pid);
             if (pid != 0)
                 cout << pid << "\t" << getCtx(pid) << endl;
         }
     }
-    // if (errno) {
-    //     perror("fts_read");
-    //     return 1;
-    // }
-
     if (fts_close(tree))
     {
         perror("fts_close");
@@ -96,6 +81,7 @@ int main()
 {
     while (true)
     {
+        system("clear");
         printCtx();
         sleep(1);
     }
