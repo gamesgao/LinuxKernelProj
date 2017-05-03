@@ -14,7 +14,7 @@ int main(int argc,char *argv[]){
     FILE* fp;
     if((fp=fopen("/proc/mtest","w"))==NULL)
     {
-        printf("The file %s can not be opened.\n","student.txt");
+        printf("The file %s can not be opened.\n","/proc/mtest");
         return -1;
     }
     // long temp =(long) &v;
