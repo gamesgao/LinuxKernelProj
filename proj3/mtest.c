@@ -155,7 +155,7 @@ ssize_t write_proc(struct file *filp, const char *buf, size_t count, loff_t *off
 {
     unsigned long val, val2;
     copy_from_user(msg, buf, count);
-    // msg[count - 1] = '\0';
+    msg[count] = '\0';
     printk(KERN_INFO "write to msg %s\n", msg);
     if (memcmp(msg, "listvma", 7) == 0)
     {
