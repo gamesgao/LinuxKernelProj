@@ -131,7 +131,7 @@ static void writeval(unsigned long addr, unsigned long val)
     }
     else
     {
-        printk("no vma found for %lx\n", addr);
+        printk(KERN_INFO "no vma found for %lx\n", addr);
     }
 out:
     up_read(&mm->mmap_sem);
