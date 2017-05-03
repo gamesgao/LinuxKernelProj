@@ -42,7 +42,7 @@ static void listvma(void)
 
 static struct page *my_follow_page(struct vm_area_struct *vma, unsigned long addr)
 {
-    pud_t *pud; //页上级若不存在pgd，则跳到out目录项
+    pud_t *pud; //页上级目录项
     pmd_t *pmd; //页中间目录项
     pgd_t *pgd; //页全局目录项
     pte_t *pte; //页表项
@@ -98,6 +98,7 @@ static void findpage(unsigned long addr)
     kernel_addr = (unsigned long) page_address(page); //将物理页框号赋值给物理地址
     kernel_addr += (addr & ~PAGE_MASK);              //物理地址+页大小得到所求
     printk(KERN_INFO "find 0x%lx to kernel address 0x%lx\n", addr, kernel_addr);
+    put_page(page);
 out:
     up_read(&mm->mmap_sem); //对信号量进行V操作
 }
