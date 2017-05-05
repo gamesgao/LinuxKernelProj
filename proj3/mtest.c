@@ -42,38 +42,37 @@ static void listvma(void)
 
 static struct page *my_follow_page(struct vm_area_struct *vma, unsigned long addr)
 {
-    pud_t *pud; //页上级目录项
-    pmd_t *pmd; //页中间目录项
-    pgd_t *pgd; //页全局目录项
-    pte_t *pte; //页表项
+    pud_t *pud; 
+    pmd_t *pmd; 
+    pgd_t *pgd; 
+    pte_t *pte; 
     spinlock_t *ptl;
-    struct page *page = NULL; //若不存在pgd，则跳到out = NULL;
-    struct mm_struct *mm = vma->vm_mm; //将当前进程的虚拟地址空间赋值给mm
-    pgd = pgd_offset(mm, addr);        //offset函数找到pgd即页全局目录
+    struct page *page = NULL; 
+    struct mm_struct *mm = vma->vm_mm; 
+    pgd = pgd_offset(mm, addr);      
     if (pgd_none(*pgd) || unlikely(pgd_bad(*pgd)))
-    { //若不存在pgd，则跳到out
+    { 
         goto out;
     }
-    pud = pud_offset(pgd, addr); //offset函数找到pud即页上级目录
+    pud = pud_offset(pgd, addr);
     if (pud_none(*pud) || unlikely(pud_bad(*pud)))
-    { //若不存在pud，则跳到out
+    {
         goto out;
     }
-    pmd = pmd_offset(pud, addr); //offset函数找到pmd即页中间目录
+    pmd = pmd_offset(pud, addr);
     if (pmd_none(*pmd) || unlikely(pmd_bad(*pmd)))
-    { //若不存在pmd，则跳到out
+    {
         goto out;
     }
-    pte = pte_offset_map_lock(mm, pmd, addr, &ptl); //通过offset_map找到页表项
-    if (!pte)                                       //如果不存在满足条件的页表项，则跳到out
+    pte = pte_offset_map_lock(mm, pmd, addr, &ptl);
+    if (!pte)                                      
         goto out;
-    if (!pte_present(*pte)) //如果该页表不在内存中，跳到unlock
+    if (!pte_present(*pte)) 
         goto unlock;
-    page = pfn_to_page(pte_pfn(*pte)); //找到相应的页框，并找到页框对应的描述符
+    page = pfn_to_page(pte_pfn(*pte)); 
     if (!page)
-        //page 返回为空，跳到unlock
             goto unlock;
-    get_page(page); // 为page赋值
+    get_page(page);
 unlock:
     pte_unmap_unlock(pte, ptl); 
 out:
@@ -84,23 +83,23 @@ static void findpage(unsigned long addr)
 {
     struct vm_area_struct *vma;
     struct mm_struct *mm = current->mm;
-    unsigned long kernel_addr; //表示物理地址
+    unsigned long kernel_addr; 
     struct page *page;
-    down_read(&mm->mmap_sem);         //对信号量进行P操作
-    vma = find_vma(mm, addr);         //定位到虚拟存储区的某一段
-    page = my_follow_page(vma, addr); //找到物理页面
+    down_read(&mm->mmap_sem);        
+    vma = find_vma(mm, addr);        
+    page = my_follow_page(vma, addr);
     if (!page)
     {
         printk(KERN_INFO "page not found for 0x%lx\n", addr);
         goto out;
     }
     printk(KERN_INFO "page found for 0x%lx\n", addr);
-    kernel_addr = (unsigned long) page_address(page); //将物理页框号赋值给物理地址
-    kernel_addr += (addr & ~PAGE_MASK);              //物理地址+页大小得到所求
+    kernel_addr = (unsigned long) page_address(page);
+    kernel_addr += (addr & ~PAGE_MASK);             
     printk(KERN_INFO "find 0x%lx to kernel address 0x%lx\n", addr, kernel_addr);
     put_page(page);
 out:
-    up_read(&mm->mmap_sem); //对信号量进行V操作
+    up_read(&mm->mmap_sem); 
 }
 
 static void writeval(unsigned long addr, unsigned long val)
@@ -127,7 +126,7 @@ static void writeval(unsigned long addr, unsigned long val)
         kernel_addr = (unsigned long)page_address(page);
         kernel_addr += (addr & ~PAGE_MASK);
         printk(KERN_INFO "write 0x%lx to address 0x%lx\n", val, kernel_addr);
-        *(unsigned long *)kernel_addr = val; //将val的值赋给物理地址
+        *(unsigned long *)kernel_addr = val; 
         put_page(page);
     }
     else
