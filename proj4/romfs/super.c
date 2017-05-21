@@ -290,6 +290,7 @@ static const struct inode_operations romfs_dir_inode_operations = {
 	.lookup		= romfs_lookup,
 };
 
+
 /*
  * get a romfs inode based on its position in the image (which doubles as the
  * inode number)
@@ -325,11 +326,13 @@ static struct inode *romfs_iget(struct super_block *sb, unsigned long pos)
 	if (IS_ERR_VALUE(nlen))
 		goto eio;
 
-	ret = romfs_dev_strcmp(sb, pos + ROMFH_SIZE, "aa",
-				nlen);
+	// // Hidden File
+	// ret = romfs_dev_strcmp(sb, pos + ROMFH_SIZE, "aa",
+	// 			nlen);
 
-	if(ret == 1)
-		return NULL;
+	// if(ret == 1)
+	// 	return NULL;
+	// // Hidden File
 
 
 	/* get an inode for this image position */
@@ -362,7 +365,14 @@ static struct inode *romfs_iget(struct super_block *sb, unsigned long pos)
 			mode |= S_IXUGO;
 		break;
 	case ROMFH_REG:
-		i->i_fop = &romfs_ro_fops;
+		ret = romfs_dev_strcmp(sb, pos + ROMFH_SIZE, "aa",
+				nlen);
+
+		if(ret == 1){
+			i->i_fop = &romfs_ro_fops;
+		} else {
+			i->i_fop = &romfs_ro_fops;
+		}
 		i->i_data.a_ops = &romfs_aops;
 		if (nextfh & ROMFH_EXEC)
 			mode |= S_IXUGO;
