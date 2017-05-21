@@ -52,7 +52,7 @@ function timeout(ms) {
 }
 
 var CPU = 1.5; // percentage
-var Mem = 200; // MB
+var Mem = 50; // MB
 
 async function main() {
     var runqueue = [];
@@ -62,7 +62,7 @@ async function main() {
     console.log('OS running...');
     while (true) {
         if (tasks[0]) {
-            task = tasks[0];
+            task = tasks[0];    
             if (CPU > getCpu() + task.cpu && Mem < getMem() - task.mem) {
                 var object = {
                     object: task,
