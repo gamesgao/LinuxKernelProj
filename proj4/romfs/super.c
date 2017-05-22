@@ -102,10 +102,10 @@ static struct inode *romfs_iget(struct super_block *sb, unsigned long pos);
 static int romfs_readpage(struct file *file, struct page *page)
 {
 	struct inode *inode = page->mapping->host;
-	loff_t offset, size;
+	loff_t offset, size, my_offset;
 	unsigned long fillsize, pos;
 	void *buf;
-	int ret;
+	int ret, j;
 
 	buf = kmap(page);
 	if (!buf)
@@ -116,6 +116,7 @@ static int romfs_readpage(struct file *file, struct page *page)
 	size = i_size_read(inode);
 	fillsize = 0;
 	ret = 0;
+	j=0;
 	if (offset < size) {
 		size -= offset;
 		fillsize = size > PAGE_SIZE ? PAGE_SIZE : size;
@@ -127,9 +128,28 @@ static int romfs_readpage(struct file *file, struct page *page)
 			SetPageError(page);
 			fillsize = 0;
 			ret = -EIO;
+			goto out;
+		}
+
+		// New
+		my_offset = ROMFS_I(inode)->i_dataoffset - ROMFS_I(inode)->i_metasize;
+		printk(KERN_INFO "3:%lld\n", my_offset);
+		j = romfs_dev_strnlen(inode->i_sb, my_offset + ROMFH_SIZE,
+				      ROMFS_MAXFN);
+		if (j < 0){
+			SetPageError(page);
+			fillsize = 0;
+			ret = -EIO;
+			goto out;
+		}
+		printk(KERN_INFO "4:%d\n", j);
+		j = romfs_dev_strcmp(inode->i_sb,my_offset+ROMFH_SIZE,"aa",j);
+		if(j == 1){
+			printk(KERN_INFO "5\n");
+			memset(buf, '*', fillsize-1);
 		}
 	}
-
+out:
 	if (fillsize < PAGE_SIZE)
 		memset(buf + fillsize, 0, PAGE_SIZE - fillsize);
 	if (ret == 0)
@@ -192,10 +212,15 @@ static int romfs_readdir(struct file *file, struct dir_context *ctx)
 			goto out;
 		fsname[j] = '\0';
 
+		// New
+		// ret = romfs_dev_strcmp(i->i_sb,offset+ROMFH_SIZE,"aa",j);
+		
+
 		ino = offset;
 		nextfh = be32_to_cpu(ri.next);
 		if ((nextfh & ROMFH_TYPE) == ROMFH_HRD)
 			ino = be32_to_cpu(ri.spec);
+		// if(ret!=1)
 		if (!dir_emit(ctx, fsname, j, ino,
 			    romfs_dtype_table[nextfh & ROMFH_TYPE]))
 			goto out;
@@ -230,6 +255,14 @@ static struct dentry *romfs_lookup(struct inode *dir, struct dentry *dentry,
 
 	name = dentry->d_name.name;
 	len = dentry->d_name.len;
+
+	// // Can also implement the hidden file here
+	// ret = romfs_dev_strcmp(dir->i_sb, offset + ROMFH_SIZE, "aa",
+	// 			len);
+
+	// if(ret == 1)
+	// 	goto out0;
+	// // Hidden File
 
 	for (;;) {
 		if (!offset || offset >= maxoff)
@@ -326,13 +359,13 @@ static struct inode *romfs_iget(struct super_block *sb, unsigned long pos)
 	if (IS_ERR_VALUE(nlen))
 		goto eio;
 
-	// // Hidden File
+	// Hidden File
 	// ret = romfs_dev_strcmp(sb, pos + ROMFH_SIZE, "aa",
 	// 			nlen);
 
 	// if(ret == 1)
 	// 	return NULL;
-	// // Hidden File
+	// Hidden File
 
 
 	/* get an inode for this image position */
