@@ -59,6 +59,7 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/string.h>
 #include <linux/fs.h>
 #include <linux/time.h>
@@ -76,6 +77,14 @@
 #include <linux/uaccess.h>
 #include <linux/major.h>
 #include "internal.h"
+
+static char* hided_file_name = "no parameter input.\n            ";
+static char* encry_file_name = "no parameter input.\n            ";
+static char* addex_file_name = "no parameter input.\n            ";
+
+module_param(hided_file_name, charp, 0644);
+module_param(encry_file_name, charp, 0644);
+module_param(addex_file_name, charp, 0644);
 
 static struct kmem_cache *romfs_inode_cachep;
 
@@ -132,21 +141,20 @@ static int romfs_readpage(struct file *file, struct page *page)
 		}
 
 		// New
-		my_offset = ROMFS_I(inode)->i_dataoffset - ROMFS_I(inode)->i_metasize;
-		printk(KERN_INFO "3:%lld\n", my_offset);
-		j = romfs_dev_strnlen(inode->i_sb, my_offset + ROMFH_SIZE,
-				      ROMFS_MAXFN);
-		if (j < 0){
-			SetPageError(page);
-			fillsize = 0;
-			ret = -EIO;
-			goto out;
-		}
-		printk(KERN_INFO "4:%d\n", j);
-		j = romfs_dev_strcmp(inode->i_sb,my_offset+ROMFH_SIZE,"aa",j);
-		if(j == 1){
-			printk(KERN_INFO "5\n");
-			memset(buf, '*', fillsize-1);
+		if(memcmp(encry_file_name, "no", 2) != 1){
+			my_offset = ROMFS_I(inode)->i_dataoffset - ROMFS_I(inode)->i_metasize;
+			j = romfs_dev_strnlen(inode->i_sb, my_offset + ROMFH_SIZE,
+						ROMFS_MAXFN);
+			if (j < 0){
+				SetPageError(page);
+				fillsize = 0;
+				ret = -EIO;
+				goto out;
+			}
+			j = romfs_dev_strcmp(inode->i_sb,my_offset+ROMFH_SIZE,encry_file_name,j);
+			if(j == 1){
+				memset(buf, '*', fillsize-1);
+			}
 		}
 	}
 out:
@@ -213,14 +221,19 @@ static int romfs_readdir(struct file *file, struct dir_context *ctx)
 		fsname[j] = '\0';
 
 		// New
-		// ret = romfs_dev_strcmp(i->i_sb,offset+ROMFH_SIZE,"aa",j);
+		if(memcmp(hided_file_name, "no", 2) != 1){
+			ret = romfs_dev_strcmp(i->i_sb,offset+ROMFH_SIZE,hided_file_name,j);
+		} else {
+			ret = 0;
+		}
+		
 		
 
 		ino = offset;
 		nextfh = be32_to_cpu(ri.next);
 		if ((nextfh & ROMFH_TYPE) == ROMFH_HRD)
 			ino = be32_to_cpu(ri.spec);
-		// if(ret!=1)
+		if(ret!=1)
 		if (!dir_emit(ctx, fsname, j, ino,
 			    romfs_dtype_table[nextfh & ROMFH_TYPE]))
 			goto out;
@@ -335,7 +348,7 @@ static struct inode *romfs_iget(struct super_block *sb, unsigned long pos)
 	struct inode *i;
 	unsigned long nlen;
 	unsigned nextfh;
-	int ret;
+	int ret, j;
 	umode_t mode;
 
 	/* we might have to traverse a chain of "hard link" file entries to get
@@ -360,11 +373,20 @@ static struct inode *romfs_iget(struct super_block *sb, unsigned long pos)
 		goto eio;
 
 	// Hidden File
-	// ret = romfs_dev_strcmp(sb, pos + ROMFH_SIZE, "aa",
-	// 			nlen);
-
-	// if(ret == 1)
-	// 	return NULL;
+	if(memcmp(hided_file_name, "no", 2) != 1){
+		ret = romfs_dev_strcmp(sb, pos + ROMFH_SIZE, hided_file_name,
+				nlen);
+		if(ret == 1)
+			return NULL;
+	}
+	if(memcmp(addex_file_name, "no", 2) != 1){
+		j = romfs_dev_strcmp(sb, pos + ROMFH_SIZE, addex_file_name,
+				nlen);
+	} else {
+		j = 0;
+	}
+	ret = 0;
+	
 	// Hidden File
 
 
@@ -398,14 +420,7 @@ static struct inode *romfs_iget(struct super_block *sb, unsigned long pos)
 			mode |= S_IXUGO;
 		break;
 	case ROMFH_REG:
-		ret = romfs_dev_strcmp(sb, pos + ROMFH_SIZE, "aa",
-				nlen);
-
-		if(ret == 1){
-			i->i_fop = &romfs_ro_fops;
-		} else {
-			i->i_fop = &romfs_ro_fops;
-		}
+		i->i_fop = &romfs_ro_fops;
 		i->i_data.a_ops = &romfs_aops;
 		if (nextfh & ROMFH_EXEC)
 			mode |= S_IXUGO;
@@ -424,8 +439,15 @@ static struct inode *romfs_iget(struct super_block *sb, unsigned long pos)
 		break;
 	}
 
-	i->i_mode = mode;
-
+	// Addex File
+	
+	if(j == 1){
+		i->i_mode = mode | S_IXUGO;
+	}	
+	else
+		i->i_mode = mode;
+	
+	// Addex File
 	unlock_new_inode(i);
 	return i;
 
